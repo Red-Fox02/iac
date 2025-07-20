@@ -1,0 +1,25 @@
+[Unit]
+Description=Prometheus Monitoring System
+Documentation=https://prometheus.io/docs/introduction/overview/
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/opt/prometheus/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/lib/prometheus/data \
+  --web.console.templates=/opt/prometheus/consoles \
+  --web.console.libraries=/opt/prometheus/console_libraries \
+  --web.listen-address=0.0.0.0:9090 \
+  --web.external-url={{ prometheus_external_url | default('http://localhost:9090') }}
+
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+TimeoutStopSec=10s
+SyslogIdentifier=prometheus
+
+[Install]
+WantedBy=multi-user.target

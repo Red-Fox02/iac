@@ -1,0 +1,21 @@
+---
+- name: Install Grafana from Yandex mirror
+  hosts: grafana
+  become: yes
+
+  tasks:
+  - name: Install Grafana
+    apt:
+      deb: "https://mirror.yandex.ru/mirrors/packages.grafana.com/oss/deb/pool/main/g/grafana/grafana_10.1.10_amd64.deb"
+
+  - name: Ensure Grafana service is enabled and running
+    systemd:
+      name: grafana-server
+      state: started
+      enabled: yes
+
+  - name: Wait for Grafana to start (30 seconds)
+    ansible.builtin.wait_for:
+      port: 3000
+      delay: 5
+      timeout: 30

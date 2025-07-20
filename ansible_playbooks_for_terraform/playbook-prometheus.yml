@@ -1,0 +1,48 @@
+---
+- name: Install Prometheus
+  hosts: prometheus
+  become: yes
+
+  tasks:
+    - name: Create prometheus user
+      user:
+        name: prometheus
+        system: yes
+        shell: /usr/sbin/nologin
+
+    - name: Download Prometheus
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v2.37.0/prometheus-2.37.0.linux-amd64.tar.gz"
+        dest: /tmp/prometheus.tar.gz
+
+    - name: Extract Prometheus
+      unarchive:
+        src: /tmp/prometheus.tar.gz
+        dest: /opt/
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+
+    - name: Create config directory
+      file:
+        path: /etc/prometheus
+        state: directory
+        owner: prometheus
+        group: prometheus
+
+    - name: Copy Prometheus config
+      template:
+        src: /home/egkyk/ansible_playbooks_for_terraform/prometheus/prometheus.yml.j2
+        dest: /etc/prometheus/prometheus.yml
+        owner: prometheus
+        group: prometheus
+
+    - name: Create systemd service
+      template:
+        src: /home/egkyk/ansible_playbooks_for_terraform/prometheus/prometheus.service.yml.j2
+        dest: /etc/systemd/system/prometheus.service
+
+    - name: Start and enable Prometheus
+      systemd:
+        name: prometheus
+        state: started
+        enabled: yes

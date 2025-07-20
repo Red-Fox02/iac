@@ -1,0 +1,57 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: {{ (alertmanager_enabled | default(false)) | ternary(['alertmanager:9093'], []) }}
+
+rule_files:
+  - /etc/prometheus/rules/*.rules
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: [
+        {% for host in groups['web_servers'] %}
+          '{{ host }}:9100',
+        {% endfor %}
+        {{ (monitoring_self_enabled | default(true)) | ternary(['prometheus:9100'], []) | join(',') }}
+        ]
+
+  - job_name: 'nginx_exporter'
+    static_configs:
+      - targets: [
+        {% for host in groups['web_servers'] %}
+          '{{ host }}:4040',
+        {% endfor %}
+        ]
+
+  {% if (cadvisor_enabled | default(false)) %}
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+  {% endif %}
+
+  {% if (blackbox_enabled | default(false)) %}
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - 'http://your-service:80'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+  {% endif %}
